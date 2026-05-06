@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, ChevronRight, SearchX, CheckCircle, X, ChevronDown } from 'lucide-react';
 import Header from '../components/Header';
 import { marketingLeads, campaigns } from '../data/mockData';
@@ -19,11 +20,16 @@ const STATUS_CLS = {
 
 function CampaignFilter({ value, onChange, campaigns }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef();
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef();
+  const dropRef = useRef();
 
   useEffect(() => {
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (btnRef.current && !btnRef.current.contains(e.target) &&
+          dropRef.current && !dropRef.current.contains(e.target)) {
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -31,58 +37,84 @@ function CampaignFilter({ value, onChange, campaigns }) {
 
   const currentCamp = value !== 'All' ? campaigns.find(c => String(c.id) === value) : null;
 
+  const openDropdown = () => {
+    setOpen(!open);
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setDropdownPos({ top: r.bottom + 8, left: r.left });
+    }
+  };
+
   return (
-    <div ref={ref} className="relative w-64">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-medical-300 transition-all flex items-center justify-between active:bg-gray-50"
-      >
-        <span className="flex items-center gap-2">
-          <span className="text-xs">Campaign:</span>
-          <span className="font-semibold text-gray-900">{currentCamp?.name || 'All'}</span>
-        </span>
-        <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-      </button>
+    <>
+      <div className="w-64">
+        <button
+          ref={btnRef}
+          onClick={openDropdown}
+          className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-medical-300 transition-all flex items-center justify-between active:bg-gray-50"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-xs">Campaign:</span>
+            <span className="font-semibold text-gray-900">{currentCamp?.name || 'All'}</span>
+          </span>
+          <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
 
-      {open && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-lg z-20 overflow-hidden" style={{ animation: 'slideUp 0.2s ease-out' }}>
-          {/* All option */}
-          <button
-            onClick={() => {
-              onChange('All');
-              setOpen(false);
+      {open && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
+          <div
+            ref={dropRef}
+            style={{
+              position: 'fixed',
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              zIndex: 9999,
+              animation: 'slideUp 0.2s ease-out',
+              width: 256,
             }}
-            className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 hover:bg-medical-50 flex items-center justify-between ${
-              value === 'All' ? 'bg-medical-100 text-medical-700 font-semibold' : 'text-gray-700 hover:text-medical-600'
-            }`}
+            className="bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden"
           >
-            <span>All Campaigns</span>
-            {value === 'All' && <CheckCircle size={14} className="text-medical-600" />}
-          </button>
-
-          {/* Campaign options */}
-          {campaigns.map((c) => (
             <button
-              key={c.id}
               onClick={() => {
-                onChange(String(c.id));
+                onChange('All');
                 setOpen(false);
               }}
-              className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center justify-between group ${
-                value === String(c.id) ? 'bg-medical-100 text-medical-700 font-semibold' : 'text-gray-700 hover:text-medical-600'
+              className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 hover:bg-medical-50 flex items-center justify-between ${
+                value === 'All' ? 'bg-medical-100 text-medical-700 font-semibold' : 'text-gray-700 hover:text-medical-600'
               }`}
             >
-              <div className="flex items-center gap-2 flex-1">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.color }} />
-                <span>{c.name}</span>
-                <span className="text-[10px] text-gray-400 font-medium ml-auto">{c.leads} leads</span>
-              </div>
-              {value === c.id && <CheckCircle size={14} className="text-medical-600 flex-shrink-0 ml-2" />}
+              <span>All Campaigns</span>
+              {value === 'All' && <CheckCircle size={14} className="text-medical-600" />}
             </button>
-          ))}
-        </div>
+
+            <div className="max-h-64 overflow-y-auto">
+              {campaigns.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    onChange(String(c.id));
+                    setOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center justify-between group ${
+                    value === String(c.id) ? 'bg-medical-100 text-medical-700 font-semibold' : 'text-gray-700 hover:text-medical-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.color }} />
+                    <span>{c.name}</span>
+                    <span className="text-[10px] text-gray-400 font-medium ml-auto">{c.leads} leads</span>
+                  </div>
+                  {value === String(c.id) && <CheckCircle size={14} className="text-medical-600 flex-shrink-0 ml-2" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 
