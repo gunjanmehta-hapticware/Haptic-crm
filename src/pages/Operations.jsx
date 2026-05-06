@@ -80,7 +80,7 @@ function OperationCard({ op, expanded, onToggle }) {
                 <span>Anesthesia: {op.anesthetist}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-red-500 font-bold">⬤</span>
+                <span className="text-red-500 font-bold">O</span>
                 <span>Blood: {op.blood}</span>
               </div>
             </div>
@@ -211,7 +211,7 @@ export default function Operations() {
                   <span className="font-semibold text-gray-800">Operating Room {room.split('-')[1]}</span>
                   <span className="badge badge-gray">{roomOps.length} operation{roomOps.length !== 1 ? 's' : ''}</span>
                   {roomOps.some(o => o.status === 'in-progress') && (
-                    <span className="badge badge-green ml-auto">● Currently Active</span>
+                    <span className="badge badge-green ml-auto">Currently Active</span>
                   )}
                 </div>
 

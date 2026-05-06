@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   PhoneCall, PhoneIncoming, PhoneMissed,
   Play, Pause, Volume2, Clock, Tag,
@@ -6,8 +6,9 @@ import {
   History, TrendingUp, TrendingDown, Minus,
   ArrowRightLeft, Bot, User, FileText,
   Droplets, Stethoscope, CalendarDays, MapPin,
-  PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen
+  PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen, CheckCircle
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import Header from '../components/Header';
 import { calls, patients } from '../data/mockData';
 
@@ -35,6 +36,109 @@ const SENT_CFG = {
   negative: { icon: TrendingDown, color: 'text-red-600',     bg: 'bg-red-50 border-red-200',         label: 'Negative' },
 };
 
+/* ─── Filter Dropdown ─── */
+function FilterDropdown({ type, selected, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef();
+  const dropRef = useRef();
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (btnRef.current && !btnRef.current.contains(e.target) &&
+          dropRef.current && !dropRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const openDropdown = () => {
+    setOpen(!open);
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      let left = r.left;
+      if (left + 300 > viewportWidth) {
+        left = viewportWidth - 300 - 16;
+      }
+      setPos({ top: r.bottom + 8, left });
+    }
+  };
+
+  const toggleOption = (opt) => {
+    onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt]);
+  };
+
+  const selectAll = () => onChange(options);
+  const clearAll = () => onChange([]);
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={openDropdown}
+        className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all flex items-center gap-2"
+      >
+        <span>+ Add Filter</span>
+        {selected.length > 0 && (
+          <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-medical-600 rounded-full ml-1">
+            {selected.length}
+          </span>
+        )}
+      </button>
+
+      {open && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
+          <div
+            ref={dropRef}
+            style={{
+              position: 'fixed',
+              top: pos.top,
+              left: pos.left,
+              zIndex: 9999,
+              animation: 'slideUp 0.2s ease-out',
+              width: 300,
+              maxHeight: '70vh',
+              overflowY: 'auto',
+            }}
+            className="bg-white border border-gray-100 rounded-xl shadow-lg"
+          >
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Filter by {type}</p>
+              <div className="flex gap-2">
+                <button onClick={selectAll} className="text-xs text-medical-600 hover:text-medical-700 font-semibold">Select All</button>
+                <span className="text-gray-300">|</span>
+                <button onClick={clearAll} className="text-xs text-medical-600 hover:text-medical-700 font-semibold">Clear</button>
+              </div>
+            </div>
+
+            <div>
+              {options.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => toggleOption(opt)}
+                  className="w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center gap-3 group"
+                >
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    selected.includes(opt) ? 'bg-medical-600 border-medical-600' : 'border-gray-300 group-hover:border-medical-400'
+                  }`}>
+                    {selected.includes(opt) && <CheckCircle size={12} className="text-white" />}
+                  </div>
+                  <span className={`text-sm capitalize ${selected.includes(opt) ? 'text-medical-700 font-semibold' : 'text-gray-700 group-hover:text-medical-700'}`}>{opt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 function WaveformPlayer({ duration, isPlaying, onToggle }) {
   const bars = Array.from({ length: 44 }, () => Math.random() * 0.6 + 0.3);
   return (
@@ -47,7 +151,7 @@ function WaveformPlayer({ duration, isPlaying, onToggle }) {
         {bars.map((h, i) => (
           <div key={i}
             className={`flex-1 rounded-full transition-all duration-300 ${
-              isPlaying && i < 16 ? 'bg-medical-600 wave-bar' :
+              isPlaying && i < 16 ? 'bg-medical-600' :
               isPlaying ? 'bg-medical-200' : 'bg-gray-300'
             }`}
             style={{
@@ -109,7 +213,7 @@ export default function VoiceCalls() {
   const [playing, setPlaying] = useState(false);
   const [playingHistoryId, setPlayingHistoryId] = useState(null);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilters, setTypeFilters] = useState([]);
   const [activeTab, setActiveTab] = useState('summary');
   const [historySelected, setHistorySelected] = useState(null);
   const [showLeft, setShowLeft] = useState(true);
@@ -118,7 +222,7 @@ export default function VoiceCalls() {
   const patientCalls = selectedCall ? calls.filter(c => c.patientId === selectedCall.patientId) : [];
   const filteredCalls = calls.filter(c =>
     (c.patient.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)) &&
-    (typeFilter === 'all' || c.type === typeFilter)
+    (!typeFilters.length || typeFilters.includes(c.type))
   );
 
   const sCfg = selectedCall ? SENT_CFG[selectedCall.sentiment] : null;
@@ -140,9 +244,17 @@ export default function VoiceCalls() {
                 <PanelLeftClose size={16} className="text-gray-400" />
               </button>
             </div>
-            <div className="relative mb-3">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input className="input pl-9 text-sm py-2" placeholder="Search calls..." value={search} onChange={e => setSearch(e.target.value)} />
+            <div className="flex gap-2 items-center mb-3">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input className="input pl-9 text-sm py-2" placeholder="Search calls..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <FilterDropdown
+                type="Call Type"
+                selected={typeFilters}
+                onChange={setTypeFilters}
+                options={['inbound', 'outbound', 'missed']}
+              />
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -364,13 +476,13 @@ export default function VoiceCalls() {
                   }`}>{patient.status}</span>
                 </div>
                 {[
-                  { label: 'Blood Group', value: patient.bloodGroup, Icon: Droplets },
-                  { label: 'Condition', value: patient.condition, Icon: Stethoscope },
-                  { label: 'Doctor', value: patient.doctor, Icon: User },
-                  { label: 'Last Visit', value: new Date(patient.lastVisit).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), Icon: CalendarDays },
-                ].map(({ label, value, Icon }) => (
+                  { label: 'Blood Group', value: patient.bloodGroup },
+                  { label: 'Condition',   value: patient.condition },
+                  { label: 'Doctor',      value: patient.doctor },
+                  { label: 'Last Visit',  value: new Date(patient.lastVisit).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) },
+                ].map(({ label, value }) => (
                   <div key={label}>
-                    <p className="text-xs text-gray-400 mb-0.5 flex items-center gap-1"><Icon size={11}/> {label}</p>
+                    <p className="text-xs text-gray-400 mb-0.5">{label}</p>
                     <p className="text-sm font-semibold text-gray-800">{value}</p>
                   </div>
                 ))}

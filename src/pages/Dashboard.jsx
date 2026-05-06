@@ -473,11 +473,6 @@ function PeriodBar({ period, setPeriod, startDate, setStartDate, endDate, setEnd
         <ChevronDown size={14} className={`transition-transform duration-200 ${showCustom ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Active label */}
-      <span className="text-sm text-gray-400 flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-medical-500 inline-block" />
-        Showing {period === 'custom' ? 'custom range' : `${current?.months.length} month${current?.months.length > 1 ? 's' : ''}`} data
-      </span>
 
       {/* Portal calendar — mounts directly on body, immune to any stacking context */}
       {showCustom && createPortal(
