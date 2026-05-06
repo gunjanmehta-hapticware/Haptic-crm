@@ -1,34 +1,139 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
   Plus, ChevronLeft, Play, Pause, Copy, CheckCheck,
-  QrCode, Link2, X, Megaphone, ArrowRight, CheckCircle,
+  QrCode, Link2, X, Megaphone, ArrowRight, CheckCircle, ChevronDown, Download, MoreVertical, Trash2, FileText,
+  Grid3X3, List,
 } from 'lucide-react';
 import Header from '../components/Header';
-import { campaigns as initialCampaigns } from '../data/mockData';
+import { campaigns as initialCampaigns, marketingLeads as allMarketingLeads } from '../data/mockData';
 
 /* ─── Constants ─── */
 const ONLINE_CHANNELS = [
-  { id: 'Instagram',   label: 'Instagram',    color: '#E1306C', icon: '📸' },
-  { id: 'Facebook',    label: 'Facebook',     color: '#1877F2', icon: '👤' },
-  { id: 'Google Ads',  label: 'Google Ads',   color: '#0284C7', icon: '🔍' },
-  { id: 'WhatsApp',    label: 'WhatsApp',     color: '#25D366', icon: '💬' },
-  { id: 'YouTube',     label: 'YouTube',      color: '#FF0000', icon: '▶️' },
-  { id: 'Twitter/X',   label: 'Twitter / X',  color: '#000000', icon: '𝕏' },
+  { id: 'Instagram',   label: 'Instagram',    color: '#E1306C' },
+  { id: 'Facebook',    label: 'Facebook',     color: '#1877F2' },
+  { id: 'Google Ads',  label: 'Google Ads',   color: '#0284C7' },
+  { id: 'WhatsApp',    label: 'WhatsApp',     color: '#25D366' },
+  { id: 'YouTube',     label: 'YouTube',      color: '#FF0000' },
+  { id: 'Twitter/X',   label: 'Twitter / X',  color: '#000000' },
 ];
 const OFFLINE_CHANNELS = [
-  { id: 'Hospital Counter',  label: 'Hospital Counter',  color: '#0891B2', icon: '🏥' },
-  { id: 'Health Camp',       label: 'Health Camp',       color: '#059669', icon: '⛺' },
-  { id: 'Pamphlet / Flyer',  label: 'Pamphlet / Flyer',  color: '#D97706', icon: '📄' },
-  { id: 'Banner / Hoarding', label: 'Banner / Hoarding', color: '#7C3AED', icon: '🪧' },
-  { id: 'Newspaper Ad',      label: 'Newspaper Ad',      color: '#374151', icon: '📰' },
-  { id: 'TV / Radio',        label: 'TV / Radio',        color: '#DC2626', icon: '📺' },
+  { id: 'Hospital Counter',  label: 'Hospital Counter',  color: '#0891B2' },
+  { id: 'Health Camp',       label: 'Health Camp',       color: '#059669' },
+  { id: 'Pamphlet / Flyer',  label: 'Pamphlet / Flyer',  color: '#D97706' },
+  { id: 'Banner / Hoarding', label: 'Banner / Hoarding', color: '#7C3AED' },
+  { id: 'Newspaper Ad',      label: 'Newspaper Ad',      color: '#374151' },
+  { id: 'TV / Radio',        label: 'TV / Radio',        color: '#DC2626' },
 ];
 const DEPARTMENTS = ['OPD','IPD','Operation Theatre','Ophthalmology','Optometry','LASIK','Cardiology','Orthopedics'];
 const FORM_FIELD_OPTIONS = ['Name','Phone','Email','Age','City','Gender','Inquiry / Complaint','Current Diagnosis','Doctor Preference','Preferred Date'];
+
+/* ─── Filter Dropdown ─── */
+function FilterDropdown({ selected, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef();
+  const dropRef = useRef();
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (btnRef.current && !btnRef.current.contains(e.target) &&
+          dropRef.current && !dropRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const openDropdown = () => {
+    setOpen(!open);
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      let left = r.left;
+      if (left + 280 > viewportWidth) {
+        left = viewportWidth - 280 - 16;
+      }
+      setPos({ top: r.bottom + 8, left });
+    }
+  };
+
+  const toggleOption = (opt) => {
+    onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt]);
+  };
+
+  const selectAll = () => onChange(options);
+  const clearAll = () => onChange([]);
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={openDropdown}
+        className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all flex items-center gap-2"
+      >
+        <span>Filter Status</span>
+        {selected.length > 0 && (
+          <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-medical-600 rounded-full">
+            {selected.length}
+          </span>
+        )}
+      </button>
+
+      {open && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
+          <div
+            ref={dropRef}
+            style={{
+              position: 'fixed',
+              top: pos.top,
+              left: pos.left,
+              zIndex: 9999,
+              animation: 'slideUp 0.2s ease-out',
+              width: 280,
+              maxHeight: '70vh',
+              overflowY: 'auto',
+            }}
+            className="bg-white border border-gray-100 rounded-xl shadow-lg"
+          >
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Campaign Status</p>
+              <div className="flex gap-2">
+                <button onClick={selectAll} className="text-xs text-medical-600 hover:text-medical-700 font-semibold">All</button>
+                <span className="text-gray-300">|</span>
+                <button onClick={clearAll} className="text-xs text-medical-600 hover:text-medical-700 font-semibold">Clear</button>
+              </div>
+            </div>
+
+            <div>
+              {options.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => toggleOption(opt)}
+                  className="w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center gap-3 group"
+                >
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    selected.includes(opt) ? 'bg-medical-600 border-medical-600' : 'border-gray-300 group-hover:border-medical-400'
+                  }`}>
+                    {selected.includes(opt) && <CheckCircle size={12} className="text-white" />}
+                  </div>
+                  <span className={`text-sm capitalize ${selected.includes(opt) ? 'text-medical-700 font-semibold' : 'text-gray-700 group-hover:text-medical-700'}`}>{opt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+}
 
 const STATUS_STYLE = {
   active: { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Active' },
@@ -66,15 +171,15 @@ function FunnelBar({ label, value, max, color, pct }) {
   const [w, setW] = useState(0);
   useEffect(() => { setTimeout(() => setW(Math.round((value / max) * 100)), 120); }, [value, max]);
   return (
-    <div className="mb-3">
-      <div className="flex items-center justify-between mb-1.5">
+    <div className="mb-2">
+      <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-semibold text-gray-600">{label}</span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span className="text-xs text-gray-400">{pct}%</span>
           <span className="text-sm font-bold text-gray-900">{value.toLocaleString()}</span>
         </div>
       </div>
-      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${w}%`, backgroundColor: color }} />
       </div>
     </div>
@@ -94,6 +199,53 @@ function Counter({ to, duration = 1000, prefix = '', suffix = '' }) {
     return () => clearInterval(t);
   }, [to, duration]);
   return <>{prefix}{val.toLocaleString()}{suffix}</>;
+}
+
+/* ─── Custom Select Dropdown ─── */
+function Select({ value, onChange, options, placeholder = 'Select...', label }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      {label && <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">{label}</label>}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-medical-300 transition-all flex items-center justify-between hover:border-gray-300 active:bg-gray-100"
+      >
+        <span className={value ? 'text-gray-800 font-medium' : 'text-gray-400'}>{value || placeholder}</span>
+        <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-lg z-20 overflow-hidden" style={{ animation: 'slideUp 0.2s ease-out' }}>
+          {options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => {
+                onChange(opt);
+                setOpen(false);
+              }}
+              className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center justify-between group ${
+                value === opt ? 'bg-medical-100 text-medical-700 font-semibold' : 'text-gray-700 hover:text-medical-600'
+              }`}
+            >
+              <span>{opt}</span>
+              {value === opt && <CheckCircle size={14} className="text-medical-600" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ─── Multi-step Create Campaign ─── */
@@ -174,13 +326,12 @@ function CreateCampaign({ onClose, onCreate }) {
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-medical-300 focus:bg-white transition-all" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Department *</label>
-                  <select value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-medical-300 transition-all">
-                    {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
-                  </select>
-                </div>
+                <Select
+                  label="Department *"
+                  value={form.department}
+                  onChange={(v) => setForm(f => ({ ...f, department: v }))}
+                  options={DEPARTMENTS}
+                />
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Budget (₹)</label>
                   <input type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))}
@@ -206,7 +357,7 @@ function CreateCampaign({ onClose, onCreate }) {
             <div className="animate-fade-in">
               <p className="text-sm text-gray-500 mb-5">Select all channels where this campaign will run. You can mix online and offline.</p>
               <div className="mb-5">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">🌐 Online / Digital</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Online / Digital</p>
                 <div className="grid grid-cols-3 gap-2">
                   {ONLINE_CHANNELS.map(ch => {
                     const on = form.channels.includes(ch.id);
@@ -214,7 +365,6 @@ function CreateCampaign({ onClose, onCreate }) {
                       <button key={ch.id} onClick={() => toggle('channels', ch.id)}
                         className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-sm font-semibold transition-all duration-200 ${on ? 'shadow-md scale-[1.02]' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}
                         style={on ? { borderColor: ch.color, backgroundColor: ch.color + '15', color: ch.color } : {}}>
-                        <span className="text-base">{ch.icon}</span>
                         <span className="text-xs">{ch.label}</span>
                         {on && <CheckCircle size={12} className="ml-auto flex-shrink-0" />}
                       </button>
@@ -223,7 +373,7 @@ function CreateCampaign({ onClose, onCreate }) {
                 </div>
               </div>
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">🏥 Offline / Physical</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Offline / Physical</p>
                 <div className="grid grid-cols-3 gap-2">
                   {OFFLINE_CHANNELS.map(ch => {
                     const on = form.channels.includes(ch.id);
@@ -231,7 +381,6 @@ function CreateCampaign({ onClose, onCreate }) {
                       <button key={ch.id} onClick={() => toggle('channels', ch.id)}
                         className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-sm font-semibold transition-all duration-200 ${on ? 'shadow-md scale-[1.02]' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}
                         style={on ? { borderColor: ch.color, backgroundColor: ch.color + '15', color: ch.color } : {}}>
-                        <span className="text-base">{ch.icon}</span>
                         <span className="text-xs">{ch.label}</span>
                         {on && <CheckCircle size={12} className="ml-auto flex-shrink-0" />}
                       </button>
@@ -352,15 +501,204 @@ function CreateCampaign({ onClose, onCreate }) {
 }
 
 /* ─── Campaign Detail View ─── */
-function CampaignDetail({ campaign: c, onBack, onToggleStatus }) {
+function CampaignDetail({ campaign: c, onBack, onToggleStatus, onDelete }) {
   const st = STATUS_STYLE[c.status] || STATUS_STYLE.active;
   const allChannels = [...ONLINE_CHANNELS, ...OFFLINE_CHANNELS];
   const [copied, setCopied] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef();
+
+  const campaignLeads = allMarketingLeads.filter(l => l.campaignId === c.id);
+  const convertedCount = campaignLeads.filter(l => l.converted).length;
+  const SOURCE_COLORS = {
+    Instagram: { bg: 'bg-pink-100', text: 'text-pink-700', dot: 'bg-pink-500' },
+    Facebook:  { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
+    'Google Ads': { bg: 'bg-medical-100', text: 'text-medical-700', dot: 'bg-medical-500' },
+    WhatsApp:  { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
+    YouTube:   { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
+  };
+  const STATUS_CLS = {
+    hot:  'bg-red-500 text-white',
+    warm: 'bg-amber-400 text-white',
+    cold: 'bg-health-500 text-white',
+  };
 
   const copy = () => {
     navigator.clipboard?.writeText(c.formLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
+  };
+
+  const downloadQR = () => {
+    const svg = document.getElementById(`qr-${c.id}`);
+    if (!svg) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const size = 400;
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, size, size);
+
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svg);
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, size, size);
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `${c.name.toLowerCase().replace(/\s+/g, '-')}-qr.png`;
+      link.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgString);
+  };
+
+  const downloadReport = () => {
+    const reportContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${c.name} Campaign Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+    h1 { color: #0284C7; border-bottom: 3px solid #0284C7; padding-bottom: 10px; }
+    h2 { color: #0284C7; margin-top: 30px; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+    .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; }
+    .status-active { background: #dcfce7; color: #166534; }
+    .status-paused { background: #fef3c7; color: #92400e; }
+    .status-ended { background: #f3f4f6; color: #374151; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0; }
+    .kpi-card { background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #0284C7; }
+    .kpi-label { color: #666; font-size: 12px; font-weight: bold; }
+    .kpi-value { font-size: 24px; font-weight: bold; color: #0284C7; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th { background: #f3f4f6; padding: 10px; text-align: left; border-bottom: 2px solid #e5e7eb; }
+    td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #666; font-size: 12px; }
+    .channel-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .channel-item { background: #f9fafb; padding: 8px 12px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>${c.name}</h1>
+      <p style="color: #666; margin: 5px 0;">${c.department} Department</p>
+    </div>
+    <div style="text-align: right;">
+      <span class="status-badge status-${c.status}">${c.status.charAt(0).toUpperCase() + c.status.slice(1)}</span>
+      <p style="color: #666; margin-top: 10px; font-size: 12px;">v${c.version}</p>
+    </div>
+  </div>
+
+  <h2>Campaign Overview</h2>
+  <table>
+    <tr>
+      <td><strong>Duration:</strong></td>
+      <td>${c.startDate}${c.endDate ? ` to ${c.endDate}` : ' (Ongoing)'}</td>
+    </tr>
+    <tr>
+      <td><strong>Budget:</strong></td>
+      <td>₹${c.budget.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td><strong>Status:</strong></td>
+      <td>${c.status.charAt(0).toUpperCase() + c.status.slice(1)}</td>
+    </tr>
+  </table>
+
+  <h2>Key Performance Indicators</h2>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Leads</div>
+      <div class="kpi-value">${c.leads}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Conversions</div>
+      <div class="kpi-value">${c.conversions}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Conversion Rate</div>
+      <div class="kpi-value">${c.leads ? Math.round((c.conversions / c.leads) * 100) : 0}%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Conv. Time</div>
+      <div class="kpi-value">${c.avgConvDays}d</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cost per Lead</div>
+      <div class="kpi-value">₹${c.budget ? Math.round(c.budget / c.leads) : 0}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cost per Conversion</div>
+      <div class="kpi-value">₹${c.conversions && c.budget ? Math.round(c.budget / c.conversions) : 0}</div>
+    </div>
+  </div>
+
+  <h2>Campaign Channels</h2>
+  <div class="channel-list">
+    ${c.channels.map(ch => `<div class="channel-item">${ch}</div>`).join('')}
+  </div>
+
+  <h2>Lead Capture Methods</h2>
+  <p>${c.captureMethod.map(m => m === 'qr' ? 'QR Code' : 'Form Link').join(', ')}</p>
+
+  <h2>Conversion Funnel</h2>
+  <table>
+    <tr>
+      <th>Stage</th>
+      <th>Count</th>
+      <th>Percentage</th>
+    </tr>
+    <tr>
+      <td>Saw Campaign</td>
+      <td>${c.funnel.saw}</td>
+      <td>100%</td>
+    </tr>
+    <tr>
+      <td>Scanned / Clicked</td>
+      <td>${c.funnel.scanned}</td>
+      <td>${c.funnel.saw ? Math.round((c.funnel.scanned / c.funnel.saw) * 100) : 0}%</td>
+    </tr>
+    <tr>
+      <td>Filled Form</td>
+      <td>${c.funnel.filled}</td>
+      <td>${c.funnel.saw ? Math.round((c.funnel.filled / c.funnel.saw) * 100) : 0}%</td>
+    </tr>
+    <tr>
+      <td>Contacted</td>
+      <td>${c.funnel.contacted}</td>
+      <td>${c.funnel.saw ? Math.round((c.funnel.contacted / c.funnel.saw) * 100) : 0}%</td>
+    </tr>
+    <tr>
+      <td>Converted</td>
+      <td>${c.funnel.converted}</td>
+      <td>${c.funnel.saw ? Math.round((c.funnel.converted / c.funnel.saw) * 100) : 0}%</td>
+    </tr>
+  </table>
+
+  <h2>Form Fields Collected</h2>
+  <p>${c.formFields.join(', ')}</p>
+
+  <div class="footer">
+    <p>Report Generated: ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+    <p>Campaign Status: ${c.status === 'ended' ? 'Completed' : 'In Progress'}</p>
+  </div>
+</body>
+</html>
+    `;
+
+    const blob = new Blob([reportContent], { type: 'text/html' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${c.name.toLowerCase().replace(/\s+/g, '-')}-report.html`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const funnelMax = c.funnel.saw || 1;
@@ -401,7 +739,7 @@ function CampaignDetail({ campaign: c, onBack, onToggleStatus }) {
                   const meta = allChannels.find(x => x.id === ch);
                   return (
                     <span key={ch} className="flex items-center gap-1.5 px-3 py-1 bg-white/20 border border-white/30 rounded-full text-xs font-semibold">
-                      {meta?.icon} {ch}
+                      {ch}
                     </span>
                   );
                 })}
@@ -411,17 +749,52 @@ function CampaignDetail({ campaign: c, onBack, onToggleStatus }) {
             {/* QR + actions */}
             <div className="flex flex-col items-end gap-3 flex-shrink-0">
               {c.captureMethod.includes('qr') && (
-                <div className="p-3 bg-white rounded-2xl shadow-lg">
-                  <QRCode seed={c.qrSlug} size={100} />
+                <div className="relative p-3 bg-white rounded-2xl shadow-lg group">
+                  <div id={`qr-${c.id}`}>
+                    <QRCode seed={c.qrSlug} size={100} />
+                  </div>
+                  <button onClick={downloadQR}
+                    className="absolute -bottom-2 -right-2 p-2 bg-medical-600 hover:bg-medical-700 text-white rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100"
+                    title="Download QR">
+                    <Download size={14} />
+                  </button>
                 </div>
               )}
               <div className="flex gap-2">
+                <button onClick={downloadReport}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 border border-white/30 text-white text-xs font-bold rounded-xl transition-all">
+                  <FileText size={13} /> {c.status === 'ended' ? 'Report' : 'Current'}
+                </button>
                 {c.status !== 'ended' && (
                   <button onClick={() => onToggleStatus(c.id)}
                     className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 border border-white/30 text-white text-xs font-bold rounded-xl transition-all">
                     {c.status === 'active' ? <><Pause size={13} /> Pause</> : <><Play size={13} /> Resume</>}
                   </button>
                 )}
+                <div className="relative">
+                  <button onClick={() => setMenuOpen(!menuOpen)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 border border-white/30 text-white rounded-xl transition-all">
+                    <MoreVertical size={16} />
+                  </button>
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg z-50 overflow-hidden">
+                        <button onClick={() => {
+                          if (window.confirm(`Delete campaign "${c.name}"?`)) {
+                            setMenuOpen(false);
+                            onDelete(c.id);
+                            onBack();
+                          }
+                        }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left text-red-600 hover:bg-red-50 transition-colors border-b border-gray-100">
+                          <Trash2 size={16} />
+                          <span className="font-medium">Delete Campaign</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -504,35 +877,110 @@ function CampaignDetail({ campaign: c, onBack, onToggleStatus }) {
         </div>
       </div>
 
-      {/* Conversion funnel */}
-      {c.funnel.saw > 0 && (
-        <div className="card mb-8 animate-fade-in">
-          <h3 className="section-title mb-1">Conversion Funnel</h3>
-          <p className="text-gray-400 text-sm mb-6">From campaign exposure to patient conversion</p>
-          <div className="max-w-lg">
-            {funnelSteps.map(({ label, value, pct }, i) => (
-              <FunnelBar key={label} label={label} value={value} max={funnelMax} pct={pct}
-                color={['#0284C7','#14B8A6','#16A34A','#7C3AED','#DC2626'][i]} />
-            ))}
+      {/* Conversion funnel & Form fields */}
+      <div className="grid grid-cols-2 gap-6 mb-8 animate-fade-in">
+        {/* Conversion funnel */}
+        {c.funnel.saw > 0 && (
+          <div className="card p-4">
+            <h3 className="section-title mb-2 text-base">Conversion Funnel</h3>
+            <p className="text-gray-400 text-xs mb-3">Campaign to patient conversion</p>
+            <div>
+              {funnelSteps.map(({ label, value, pct }, i) => (
+                <FunnelBar key={label} label={label} value={value} max={funnelMax} pct={pct}
+                  color={['#0284C7','#14B8A6','#16A34A','#7C3AED','#DC2626'][i]} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Form fields */}
-      {c.formFields?.length > 0 && (
-        <div className="card animate-fade-in">
-          <h3 className="section-title mb-1">Form Fields</h3>
-          <p className="text-gray-400 text-sm mb-4">Data collected from every lead</p>
-          <div className="flex flex-wrap gap-2">
-            {c.formFields.map(f => (
-              <div key={f} className="flex items-center gap-2 px-3 py-2 bg-medical-50 border border-medical-200 rounded-xl">
-                <div className="w-1.5 h-1.5 bg-medical-500 rounded-full" />
-                <span className="text-sm font-semibold text-medical-700">{f}</span>
-              </div>
-            ))}
+        {/* Performance Metrics */}
+        {campaignLeads.length > 0 && (
+          <div className="card p-4">
+            <h3 className="section-title mb-2 text-base">Performance Metrics</h3>
+            <p className="text-gray-400 text-xs mb-3">Campaign efficiency analysis</p>
+            <div className="space-y-2">
+              {[
+                { label: 'Cost per Lead', value: c.budget ? `₹${Math.round(c.budget / campaignLeads.length)}` : '—', color: '#0284C7' },
+                { label: 'Cost per Conversion', value: convertedCount && c.budget ? `₹${Math.round(c.budget / convertedCount)}` : '—', color: '#16A34A' },
+                { label: 'Leads per Day', value: (campaignLeads.length / Math.ceil((new Date(c.endDate || new Date()) - new Date(c.startDate)) / (1000 * 60 * 60 * 24))).toFixed(1), color: '#7C3AED' },
+                { label: 'Conversion %', value: `${campaignLeads.length ? Math.round((convertedCount / campaignLeads.length) * 100) : 0}%`, color: '#D97706' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors">
+                  <span className="text-xs text-gray-600 font-medium">{label}</span>
+                  <span className="text-sm font-bold" style={{ color }}>{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* Campaign Leads */}
+      <div className="card animate-fade-in">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="section-title">Leads from this Campaign</h3>
+          <span className="text-sm font-bold text-medical-600 bg-medical-50 px-3 py-1 rounded-full">{campaignLeads.length} leads, {convertedCount} customers</span>
         </div>
-      )}
+        <p className="text-gray-400 text-sm mb-5">All contacts captured through this campaign</p>
+
+        {campaignLeads.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Lead</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Source</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Inquiry</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Date</th>
+                  <th className="text-center px-4 py-3 font-semibold text-gray-600">Converted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaignLeads.map(lead => (
+                  <tr key={lead.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-semibold text-gray-900">{lead.name}</p>
+                        <p className="text-xs text-gray-400">{lead.phone}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${SOURCE_COLORS[lead.source]?.bg || 'bg-gray-100'} ${SOURCE_COLORS[lead.source]?.text || 'text-gray-700'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${SOURCE_COLORS[lead.source]?.dot || 'bg-gray-400'}`} />
+                        {lead.source}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold capitalize ${STATUS_CLS[lead.status]}`}>
+                        {lead.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-gray-700 max-w-xs truncate">{lead.inquiry}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 font-medium">{lead.date}</td>
+                    <td className="px-4 py-3 text-center">
+                      {lead.converted ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <CheckCircle size={16} className="text-green-600" />
+                          <span className="text-xs font-semibold text-green-700">{lead.medId}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-12 text-center">
+            <p className="text-gray-400 text-sm">No leads yet for this campaign</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -637,7 +1085,12 @@ export default function Campaigns() {
   const [camps, setCamps] = useState(initialCampaigns);
   const [selected, setSelected] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [statusFilters, setStatusFilters] = useState([]);
+  const [viewMode, setViewMode] = useState('grid');
 
+  const filteredCamps = statusFilters.length > 0
+    ? camps.filter(c => statusFilters.includes(c.status))
+    : camps;
 
   const toggleStatus = id => setCamps(cs => cs.map(c => c.id !== id ? c : { ...c, status: c.status === 'active' ? 'paused' : 'active' }));
 
@@ -645,7 +1098,12 @@ export default function Campaigns() {
     <div className="flex flex-col h-full">
       <Header title="Campaign Details" subtitle={selected.name} />
       <div className="flex-1 p-8 overflow-auto">
-        <CampaignDetail campaign={selected} onBack={() => setSelected(null)} onToggleStatus={id => { toggleStatus(id); setSelected(c => ({ ...c, status: c.status === 'active' ? 'paused' : 'active' })); }} />
+        <CampaignDetail
+          campaign={selected}
+          onBack={() => setSelected(null)}
+          onToggleStatus={id => { toggleStatus(id); setSelected(c => ({ ...c, status: c.status === 'active' ? 'paused' : 'active' })); }}
+          onDelete={id => setCamps(cs => cs.filter(c => c.id !== id))}
+        />
       </div>
     </div>
   );
@@ -658,11 +1116,35 @@ export default function Campaigns() {
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            {['all', 'active', 'paused', 'ended'].map(s => (
-              <button key={s} className="px-3 py-1.5 rounded-xl text-xs font-bold capitalize border border-gray-200 text-gray-500 hover:border-medical-400 hover:text-medical-600 transition-all">
-                {s === 'all' ? `All (${camps.length})` : `${s.charAt(0).toUpperCase() + s.slice(1)} (${camps.filter(c => c.status === s).length})`}
+            <FilterDropdown
+              selected={statusFilters}
+              onChange={setStatusFilters}
+              options={['active', 'paused', 'ended']}
+            />
+            <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-medical-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                title="Grid view"
+              >
+                <Grid3X3 size={16} />
               </button>
-            ))}
+              <button
+                onClick={() => setViewMode('table')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-white text-medical-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                title="Table view"
+              >
+                <List size={16} />
+              </button>
+            </div>
           </div>
           <button onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-medical-600 to-teal-600 hover:opacity-90 text-white text-sm font-bold rounded-xl shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl">
@@ -670,14 +1152,70 @@ export default function Campaigns() {
           </button>
         </div>
 
-        {/* Campaign grid */}
-        <div className="grid grid-cols-3 gap-5">
-          {camps.map((c, i) => (
-            <CampaignCard key={c.id} c={c} index={i}
-              onClick={() => setSelected(c)}
-              onToggle={toggleStatus} />
-          ))}
-        </div>
+        {/* Campaign grid or table */}
+        {viewMode === 'grid' ? (
+          <div className="grid grid-cols-3 gap-5">
+            {filteredCamps.map((c, i) => (
+              <CampaignCard key={c.id} c={c} index={i}
+                onClick={() => setSelected(c)}
+                onToggle={toggleStatus} />
+            ))}
+          </div>
+        ) : (
+          <div className="card p-0 overflow-hidden">
+            {filteredCamps.length > 0 ? (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Campaign</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Department</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Leads</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Conv.</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Rate</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Duration</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Budget</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCamps.map((c) => {
+                    const st = STATUS_STYLE[c.status] || STATUS_STYLE.active;
+                    const convRate = c.leads ? Math.round((c.conversions / c.leads) * 100) : 0;
+                    return (
+                      <tr key={c.id} onClick={() => setSelected(c)}
+                        className="border-b border-gray-100 hover:bg-medical-50 transition-colors cursor-pointer group">
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-bold text-gray-900">{c.name}</p>
+                            <p className="text-xs text-gray-400 mt-1">v{c.version}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700">{c.department}</td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${st.bg} ${st.text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${st.dot} ${c.status === 'active' ? 'animate-pulse' : ''}`} />
+                            {st.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">{c.leads}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">{c.conversions}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-bold" style={{ color: '#7C3AED' }}>{convRate}%</span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{c.startDate}{c.endDate ? ` → ${c.endDate}` : ''}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{(c.budget / 1000).toFixed(0)}K</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <div className="py-12 text-center">
+                <p className="text-gray-400 text-sm">No campaigns match the selected filters</p>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
 

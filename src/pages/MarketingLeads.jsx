@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
-import { Search, ChevronRight, SearchX, CheckCircle, X } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Search, ChevronRight, SearchX, CheckCircle, X, ChevronDown } from 'lucide-react';
 import Header from '../components/Header';
 import { marketingLeads, campaigns } from '../data/mockData';
 
@@ -17,22 +18,154 @@ const STATUS_CLS = {
   cold: 'bg-health-500 text-white',
 };
 
+function CampaignFilter({ value, onChange, campaigns }) {
+  const [open, setOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef();
+  const dropRef = useRef();
+
+  const selectedIds = Array.isArray(value) ? value : (value === 'All' || !value ? [] : [value]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (btnRef.current && !btnRef.current.contains(e.target) &&
+          dropRef.current && !dropRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const toggleCampaign = (id) => {
+    const newIds = selectedIds.includes(id)
+      ? selectedIds.filter(x => x !== id)
+      : [...selectedIds, id];
+    onChange(newIds);
+  };
+
+  const getDisplayText = () => {
+    if (!selectedIds.length) return 'All';
+    if (selectedIds.length === 1) {
+      const camp = campaigns.find(c => String(c.id) === selectedIds[0]);
+      if (!camp) return 'All';
+      const words = camp.name.split(' ').slice(0, 2).join(' ');
+      return words.length < camp.name.length ? words + '...' : words;
+    }
+    return `${selectedIds.length} selected`;
+  };
+
+  const openDropdown = () => {
+    setOpen(!open);
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setDropdownPos({ top: r.bottom + 8, left: r.left });
+    }
+  };
+
+  return (
+    <>
+      <div className="w-64">
+        <button
+          ref={btnRef}
+          onClick={openDropdown}
+          className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-medical-300 transition-all flex items-center justify-between active:bg-gray-50"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Campaign</span>
+            <span className="font-semibold text-gray-900">{getDisplayText()}</span>
+          </span>
+          <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      {open && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
+          <div
+            ref={dropRef}
+            style={{
+              position: 'fixed',
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              zIndex: 9999,
+              animation: 'slideUp 0.2s ease-out',
+              width: 256,
+            }}
+            className="bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden"
+          >
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Filter by Campaign</p>
+            </div>
+
+            <button
+              onClick={() => {
+                onChange([]);
+              }}
+              className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 hover:bg-medical-50 flex items-center gap-3 group ${
+                !selectedIds.length ? 'bg-medical-50' : ''
+              }`}
+            >
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                !selectedIds.length ? 'bg-medical-600 border-medical-600' : 'border-gray-300 group-hover:border-medical-400'
+              }`}>
+                {!selectedIds.length && <CheckCircle size={12} className="text-white" />}
+              </div>
+              <span className={`font-medium ${!selectedIds.length ? 'text-medical-700 font-semibold' : 'text-gray-700'}`}>All Campaigns</span>
+            </button>
+
+            <div className="max-h-64 overflow-y-auto">
+              {campaigns.map((c) => {
+                const isSelected = selectedIds.includes(String(c.id));
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => toggleCampaign(String(c.id))}
+                    className="w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center gap-3 group"
+                  >
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                      isSelected ? 'bg-medical-600 border-medical-600' : 'border-gray-300 group-hover:border-medical-400'
+                    }`}>
+                      {isSelected && <CheckCircle size={12} className="text-white" />}
+                    </div>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.color }} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm truncate ${isSelected ? 'text-medical-700 font-semibold' : 'text-gray-700 group-hover:text-medical-700'}`}>{c.name}</p>
+                    </div>
+                    <span className="text-xs text-gray-400 font-medium flex-shrink-0">{c.leads}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
+  );
+}
+
 export default function MarketingLeads() {
   const [search, setSearch] = useState('');
-  const [sourceFilter, setSourceFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [campaignFilter, setCampaignFilter] = useState('All');
+  const [sources, setSources] = useState([]);
+  const [statuses, setStatuses] = useState([]);
+  const [campaignFilter, setCampaignFilter] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const filterBtnRef = useRef();
+  const [filterPos, setFilterPos] = useState({ top: 0, left: 0 });
 
-  const SOURCES = ['All', 'Instagram', 'Facebook', 'Google Ads', 'WhatsApp', 'YouTube'];
-  const STATUSES = ['All', 'hot', 'warm', 'cold'];
+  const SOURCES = ['Instagram', 'Facebook', 'Google Ads', 'WhatsApp', 'YouTube'];
+  const STATUSES = ['hot', 'warm', 'cold'];
 
-  const filtered = useMemo(() => marketingLeads.filter(l =>
-    l.name.toLowerCase().includes(search.toLowerCase()) &&
-    (sourceFilter === 'All' || l.source === sourceFilter) &&
-    (statusFilter === 'All' || l.status === statusFilter) &&
-    (campaignFilter === 'All' || l.campaignId === Number(campaignFilter))
-  ), [search, sourceFilter, statusFilter, campaignFilter]);
+  const filtered = useMemo(() => marketingLeads.filter(l => {
+    const selectedCampaignIds = Array.isArray(campaignFilter) ? campaignFilter : [];
+    const sourceMatch = !sources.length || sources.includes(l.source);
+    const statusMatch = !statuses.length || statuses.includes(l.status);
+    const campaignMatch = !selectedCampaignIds.length || selectedCampaignIds.includes(String(l.campaignId));
+    return l.name.toLowerCase().includes(search.toLowerCase()) &&
+      sourceMatch && statusMatch && campaignMatch;
+  }), [search, sources, statuses, campaignFilter]);
 
   return (
     <div className="flex flex-col h-full">
@@ -47,27 +180,119 @@ export default function MarketingLeads() {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input className="input pl-9" placeholder="Search lead name..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}
-            className="input text-sm w-52">
-            <option value="All">All Campaigns</option>
-            {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <div className="flex gap-1.5">
-            {SOURCES.map(s => (
-              <button key={s} onClick={() => setSourceFilter(s)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border capitalize transition-all ${sourceFilter === s ? 'bg-medical-600 text-white border-medical-600 shadow-sm' : 'border-gray-200 text-gray-700 hover:border-medical-400'}`}>
-                {s}
-              </button>
-            ))}
+          <CampaignFilter
+            value={campaignFilter}
+            onChange={setCampaignFilter}
+            campaigns={campaigns}
+          />
+
+          {/* Add Filter Button */}
+          <div className="relative">
+            <button
+              ref={filterBtnRef}
+              onClick={() => {
+                setFilterMenuOpen(!filterMenuOpen);
+                if (filterBtnRef.current) {
+                  const r = filterBtnRef.current.getBoundingClientRect();
+                  const viewportWidth = window.innerWidth;
+                  let left = r.left;
+                  if (left + 320 > viewportWidth) {
+                    left = viewportWidth - 320 - 16;
+                  }
+                  setFilterPos({ top: r.bottom + 8, left });
+                }
+              }}
+              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-medical-600 hover:border-medical-300 hover:bg-medical-50 transition-all flex items-center gap-2 relative"
+            >
+              <span>+ Add Filter</span>
+              {(sources.length + statuses.length) > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-medical-600 rounded-full ml-1">
+                  {sources.length + statuses.length}
+                </span>
+              )}
+            </button>
+
+            {filterMenuOpen && createPortal(
+              <>
+                <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setFilterMenuOpen(false)} />
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: filterPos.top,
+                    left: filterPos.left,
+                    zIndex: 9999,
+                    animation: 'slideUp 0.2s ease-out',
+                    width: 320,
+                    maxHeight: '70vh',
+                    overflowY: 'auto',
+                  }}
+                  className="bg-white border border-gray-100 rounded-xl shadow-lg"
+                >
+                  {/* Source Filters */}
+                  <div className="border-b border-gray-100">
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Source</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setSources(SOURCES)} className="text-xs text-medical-600 hover:text-medical-700 font-semibold">Select All</button>
+                        <span className="text-gray-300">|</span>
+                        <button onClick={() => setSources([])} className="text-xs text-medical-600 hover:text-medical-700 font-semibold">Clear</button>
+                      </div>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {SOURCES.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            setSources(sources.includes(s) ? sources.filter(x => x !== s) : [...sources, s]);
+                          }}
+                          className="w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center gap-3 group"
+                        >
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            sources.includes(s) ? 'bg-medical-600 border-medical-600' : 'border-gray-300 group-hover:border-medical-400'
+                          }`}>
+                            {sources.includes(s) && <CheckCircle size={12} className="text-white" />}
+                          </div>
+                          <span className={`text-sm ${sources.includes(s) ? 'text-medical-700 font-semibold' : 'text-gray-700 group-hover:text-medical-700'}`}>{s}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Status Filters */}
+                  <div>
+                    <div className="px-4 py-3 bg-gray-50 flex items-center justify-between">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Status</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setStatuses(STATUSES)} className="text-xs text-medical-600 hover:text-medical-700 font-semibold">Select All</button>
+                        <span className="text-gray-300">|</span>
+                        <button onClick={() => setStatuses([])} className="text-xs text-medical-600 hover:text-medical-700 font-semibold">Clear</button>
+                      </div>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {STATUSES.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            setStatuses(statuses.includes(s) ? statuses.filter(x => x !== s) : [...statuses, s]);
+                          }}
+                          className="w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center gap-3 group"
+                        >
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            statuses.includes(s) ? 'bg-medical-600 border-medical-600' : 'border-gray-300 group-hover:border-medical-400'
+                          }`}>
+                            {statuses.includes(s) && <CheckCircle size={12} className="text-white" />}
+                          </div>
+                          <span className={`capitalize text-sm ${statuses.includes(s) ? 'text-medical-700 font-semibold' : 'text-gray-700 group-hover:text-medical-700'}`}>{s}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>,
+              document.body
+            )}
           </div>
-          <div className="flex gap-1.5">
-            {STATUSES.map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border capitalize transition-all ${statusFilter === s ? 'bg-medical-600 text-white border-medical-600 shadow-sm' : 'border-gray-200 text-gray-700 hover:border-medical-400'}`}>
-                {s}
-              </button>
-            ))}
-          </div>
+
         </div>
 
         {/* Table */}
@@ -154,7 +379,7 @@ export default function MarketingLeads() {
                     <h2 className="text-lg font-bold">{selected.name}</h2>
                     <p className="text-white/70 text-sm mt-0.5">{selected.crmId} · {selected.city}</p>
                     <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-bold mt-2 ${selected.converted ? 'bg-green-400/30' : 'bg-white/20'}`}>
-                      {selected.converted ? `✓ Converted → ${selected.medId}` : '● Lead'}
+                      {selected.converted ? `Converted - ${selected.medId}` : 'Lead'}
                     </span>
                   </div>
                 </div>
