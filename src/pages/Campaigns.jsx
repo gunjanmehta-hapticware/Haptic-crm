@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Plus, ChevronLeft, Play, Pause, Copy, CheckCheck,
-  QrCode, Link2, X, Megaphone, ArrowRight, CheckCircle,
+  QrCode, Link2, X, Megaphone, ArrowRight, CheckCircle, ChevronDown,
 } from 'lucide-react';
 import Header from '../components/Header';
 import { campaigns as initialCampaigns } from '../data/mockData';
@@ -96,6 +96,53 @@ function Counter({ to, duration = 1000, prefix = '', suffix = '' }) {
   return <>{prefix}{val.toLocaleString()}{suffix}</>;
 }
 
+/* ─── Custom Select Dropdown ─── */
+function Select({ value, onChange, options, placeholder = 'Select...', label }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      {label && <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">{label}</label>}
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-medical-300 transition-all flex items-center justify-between hover:border-gray-300 active:bg-gray-100"
+      >
+        <span className={value ? 'text-gray-800 font-medium' : 'text-gray-400'}>{value || placeholder}</span>
+        <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-lg z-20 overflow-hidden" style={{ animation: 'slideUp 0.2s ease-out' }}>
+          {options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => {
+                onChange(opt);
+                setOpen(false);
+              }}
+              className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center justify-between group ${
+                value === opt ? 'bg-medical-100 text-medical-700 font-semibold' : 'text-gray-700 hover:text-medical-600'
+              }`}
+            >
+              <span>{opt}</span>
+              {value === opt && <CheckCircle size={14} className="text-medical-600" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Multi-step Create Campaign ─── */
 function CreateCampaign({ onClose, onCreate }) {
   const [step, setStep] = useState(1);
@@ -174,13 +221,12 @@ function CreateCampaign({ onClose, onCreate }) {
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-medical-300 focus:bg-white transition-all" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Department *</label>
-                  <select value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-medical-300 transition-all">
-                    {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
-                  </select>
-                </div>
+                <Select
+                  label="Department *"
+                  value={form.department}
+                  onChange={(v) => setForm(f => ({ ...f, department: v }))}
+                  options={DEPARTMENTS}
+                />
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Budget (₹)</label>
                   <input type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))}

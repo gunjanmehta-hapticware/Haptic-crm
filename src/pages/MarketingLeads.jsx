@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Search, ChevronRight, SearchX, CheckCircle, X } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { Search, ChevronRight, SearchX, CheckCircle, X, ChevronDown } from 'lucide-react';
 import Header from '../components/Header';
 import { marketingLeads, campaigns } from '../data/mockData';
 
@@ -16,6 +16,75 @@ const STATUS_CLS = {
   warm: 'bg-amber-400 text-white',
   cold: 'bg-health-500 text-white',
 };
+
+function CampaignFilter({ value, onChange, campaigns }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const currentCamp = value !== 'All' ? campaigns.find(c => String(c.id) === value) : null;
+
+  return (
+    <div ref={ref} className="relative w-64">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-medical-300 transition-all flex items-center justify-between active:bg-gray-50"
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-xs">Campaign:</span>
+          <span className="font-semibold text-gray-900">{currentCamp?.name || 'All'}</span>
+        </span>
+        <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-lg z-20 overflow-hidden" style={{ animation: 'slideUp 0.2s ease-out' }}>
+          {/* All option */}
+          <button
+            onClick={() => {
+              onChange('All');
+              setOpen(false);
+            }}
+            className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 hover:bg-medical-50 flex items-center justify-between ${
+              value === 'All' ? 'bg-medical-100 text-medical-700 font-semibold' : 'text-gray-700 hover:text-medical-600'
+            }`}
+          >
+            <span>All Campaigns</span>
+            {value === 'All' && <CheckCircle size={14} className="text-medical-600" />}
+          </button>
+
+          {/* Campaign options */}
+          {campaigns.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => {
+                onChange(String(c.id));
+                setOpen(false);
+              }}
+              className={`w-full px-4 py-3 text-sm text-left transition-all duration-150 border-b border-gray-50 last:border-0 hover:bg-medical-50 flex items-center justify-between group ${
+                value === String(c.id) ? 'bg-medical-100 text-medical-700 font-semibold' : 'text-gray-700 hover:text-medical-600'
+              }`}
+            >
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.color }} />
+                <span>{c.name}</span>
+                <span className="text-[10px] text-gray-400 font-medium ml-auto">{c.leads} leads</span>
+              </div>
+              {value === c.id && <CheckCircle size={14} className="text-medical-600 flex-shrink-0 ml-2" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function MarketingLeads() {
   const [search, setSearch] = useState('');
@@ -47,11 +116,11 @@ export default function MarketingLeads() {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input className="input pl-9" placeholder="Search lead name..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}
-            className="input text-sm w-52">
-            <option value="All">All Campaigns</option>
-            {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <CampaignFilter
+            value={campaignFilter}
+            onChange={setCampaignFilter}
+            campaigns={campaigns}
+          />
           <div className="flex gap-1.5">
             {SOURCES.map(s => (
               <button key={s} onClick={() => setSourceFilter(s)}
