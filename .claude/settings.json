@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import docx\")",
+      "Bash(python -c ' *)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\GunjanMehta\\\\Desktop\\\\HVDESAI\\\\healthcare-crm\\\\gen_frd.py\")",
+      "Bash(del \"c:\\\\Users\\\\GunjanMehta\\\\Desktop\\\\HVDESAI\\\\healthcare-crm\\\\gen_frd.py\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\GunjanMehta\\Desktop\\HVDESAI\\healthcare-crm"
+    ]
+  }
+}
