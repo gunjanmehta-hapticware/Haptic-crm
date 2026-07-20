@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Calendar, Users, PhoneCall, Settings, LogOut,
-  Hospital, ChevronRight, PanelLeftClose, Megaphone, Radio,
+  Hospital, ChevronRight, PanelLeftClose,
+  Megaphone, Radio,
 } from 'lucide-react';
 import { currentUser } from '../data/mockData';
 

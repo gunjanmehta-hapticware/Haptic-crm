@@ -61,7 +61,7 @@ const ALL_WIDGET_DEFS = [
   },
 ];
 
-const DEFAULT_WIDGETS = ['kpi', 'trends', 'apptTypes', 'todayAppts'];
+const DEFAULT_WIDGETS = ['kpi', 'trends', 'apptTypes', 'todayAppts', 'leadsBySource', 'turnaround', 'crmToMed'];
 
 // ─── Tiny previews for the widget gallery ───────────────────────────────────
 
@@ -683,32 +683,34 @@ export default function Dashboard() {
     );
 
     if (id === 'apptTypes') return (
-      <WidgetShell key={id} id={id}>
-        <div className="card animate-fade-in animate-delay-300 h-full">
-          <div className="mb-6">
+      <WidgetShell key={id} id={id} extraStyle={{ alignSelf: 'stretch' }}>
+        <div className="card animate-fade-in animate-delay-300 h-full flex flex-col justify-center">
+          <div className="mb-4">
             <h3 className="section-title">Appointment Types</h3>
             <p className="text-gray-400 text-sm mt-0.5">This month's breakdown</p>
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie data={chartData.appointmentTypes} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
-                {chartData.appointmentTypes.map((_, index) => (
-                  <Cell key={index} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => [`${v}%`, '']} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-2 mt-2">
-            {chartData.appointmentTypes.map(({ name, value }, index) => (
-              <div key={name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length] }} />
-                  <span className="text-xs text-gray-600">{name}</span>
+          <div className="flex items-center gap-4">
+            <ResponsiveContainer width="50%" height={160}>
+              <PieChart>
+                <Pie data={chartData.appointmentTypes} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={3} dataKey="value">
+                  {chartData.appointmentTypes.map((_, index) => (
+                    <Cell key={index} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => [`${v}%`, '']} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex-1 space-y-2">
+              {chartData.appointmentTypes.map(({ name, value }, index) => (
+                <div key={name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length] }} />
+                    <span className="text-xs text-gray-600 truncate">{name}</span>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-700 flex-shrink-0 ml-2">{value}%</span>
                 </div>
-                <span className="text-xs font-semibold text-gray-700">{value}%</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </WidgetShell>
@@ -929,16 +931,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
-      {/* Floating Add Widget button */}
-      <button
-        onClick={() => setShowAddModal(true)}
-        className="fixed bottom-8 right-8 z-30 flex items-center gap-2.5 px-5 py-3.5 bg-medical-600 hover:bg-medical-700 text-white font-semibold text-sm rounded-2xl shadow-xl shadow-medical-600/40 transition-all hover:shadow-2xl hover:shadow-medical-600/50 hover:-translate-y-1 active:scale-95 active:translate-y-0"
-        style={{ animation: 'fabIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.3s both' }}
-      >
-        <Plus size={18} className="transition-transform duration-300 group-hover:rotate-90" />
-        Add Widget
-      </button>
 
       {showAddModal && (
         <AddWidgetModal
